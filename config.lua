@@ -15,21 +15,21 @@ Config = {
     -- presentation stay with the gameplay resource. Keys are stable and must never
     -- be renamed once assets exist.
     --
-    -- Master plan A1/A4: horses first; wagons are enabled with the bcc-wagons port
-    -- to validate the abstraction before Contract 1 is frozen, then boats.
+    -- Master plan A1/A4: horses first (bcc-stables); wagons and boats share the
+    -- same service with no type-specific code (see ASSETS_PLAN.md).
     AssetTypes = {
         horse = {
             label = 'Horse',
             holderTypes = { 'character', 'organization' }
+        },
+        wagon = {
+            label = 'Wagon',
+            holderTypes = { 'character', 'organization' }
+        },
+        boat = {
+            label = 'Boat',
+            holderTypes = { 'character', 'organization' }
         }
-        -- wagon = {
-        --     label = 'Wagon',
-        --     holderTypes = { 'character', 'organization' }
-        -- },
-        -- boat = {
-        --     label = 'Boat',
-        --     holderTypes = { 'character', 'organization' }
-        -- }
     },
 
     -- Holder references point at identities Assets does not own.
@@ -63,12 +63,14 @@ Config = {
     Access = {
         trustedReaders = {
             ['feather-assets'] = true,
-            ['feather-admin'] = true
+            ['feather-admin'] = true,
+            ['bcc-stables'] = true
         },
         -- May register assets they will manage, and mutate assets they manage.
         trustedManagers = {
             ['feather-assets'] = true,
-            ['feather-admin'] = true
+            ['feather-admin'] = true,
+            ['bcc-stables'] = true
         },
         -- May mutate assets managed by another resource.
         privilegedManagers = {
@@ -76,7 +78,8 @@ Config = {
         },
         trustedAuditors = {
             ['feather-assets'] = true,
-            ['feather-admin'] = true
+            ['feather-admin'] = true,
+            ['bcc-stables'] = true
         },
         privilegedAuditors = {
             ['feather-admin'] = true
