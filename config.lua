@@ -2,7 +2,8 @@ Config = {
     Contract = 1,
     RequiredCoreContract = 1,
     ReadinessTimeoutMs = 30000,
-    DevMode = false,
+    DevMode = true,
+    Delegation = { enabled = true }, -- optional Access provider; no startup dependency
 
     Outbox = {
         pollIntervalMs = 1000,
@@ -86,3 +87,9 @@ Config = {
         }
     }
 }
+
+-- Isolated domain acceptance resource; never grants privileged cross-manager access.
+if Config.DevMode then
+    Config.Access.trustedReaders['feather-assets-access-tests'] = true
+    Config.Access.trustedManagers['feather-assets-access-tests'] = true
+end

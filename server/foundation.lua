@@ -313,7 +313,7 @@ function Assets.GetCapabilities()
             holderValidation = 1,
             clientSnapshot = 1,
             delegationEpoch = 1,
-            accessProvider = 0,
+            accessProvider = 1,
             liens = 0,
             custody = 0,
             legacyMigration = 0
@@ -712,6 +712,7 @@ function Assets.ValidateConfig()
     if Config.Contract ~= 1 or Config.RequiredCoreContract ~= 1
         or not Assets.Integer(Config.ReadinessTimeoutMs, 0, 60000)
         or type(Config.DevMode) ~= 'boolean' or type(Config.Access) ~= 'table'
+        or type(Config.Delegation) ~= 'table' or type(Config.Delegation.enabled) ~= 'boolean'
         or type(Config.Authorization) ~= 'table' or type(Config.Authorization.enabled) ~= 'boolean'
         or not Assets.Reason(Config.Authorization.manageAction)
         or not Assets.Reason(Config.Authorization.transferAction) then

@@ -1,5 +1,44 @@
 # Feather Assets
 
+## Access-backed retrieval delegation (alpha)
+
+For transfer adoption, a trusted manager calls `PrepareDelegationPreservation`
+with assetId, actorSource, requestId, reasonCode and grants (`grantId` plus
+expectedRevision). Include its manifestId as `preservationManifestId` in normal
+`TransferOwnership`. Ownership/epoch still changes immediately and delegation denies.
+The current new character owner then calls `AdoptDelegationPreservation` with
+actorSource, requestId, reasonCode, manifestId, transferResource, transferRequestId
+and selected grants. The actual committed transfer receipt must match. Original
+IDs/expiry stay; revoke uses the adopted grant's incremented revision.
+`FindDelegationOperation({requestId=...})` lets trusted readers recover Access
+broker receipts after an unknown outcome. Do not change an operation's payload
+to retry. Transfer replay accepts a previously consumed manifest as historical
+proof; new transfers still require its original source epoch under lock.
+
+`Config.Delegation.enabled=true` registers target `assets.asset` with the optional
+`feather-access` resource. The only capability is `asset.retrieve`. No startup
+dependency on Access is added; delegated checks fail closed while it is unavailable.
+`AssetsAccessStatus` reports registration. A provider re-registers after Access
+restarts. Install matching Access trust/config and Admin service permissions.
+
+Trusted Assets managers may call `GrantRetrievalCapability` with assetId,
+actorSource, requestId, reasonCode, granteeType/granteeId, validFrom/validUntil
+and optional organization roleIds. The online actor must be the current character
+owner. Assets derives target epoch, capability and provenance. System callers and
+organization ownership cannot issue grants in this increment. Use
+`RevokeRetrievalGrant` with actorSource, grantId, expectedRevision, requestId and
+reasonCode; current target ownership is revalidated by Access. Revocation remains
+available to the owner while held/missing. Recipients gain no onward delegation.
+
+Trusted readers call `CheckDelegatedRetrieval({assetId=uuid, actorSource=source})`.
+Inspect both `ok` and `value.allowed`. This checks delegation only: owning the asset
+does not itself create a delegated grant. Owner retrieval remains a separate domain
+ownership check. Held, missing and retired targets deny delegated retrieval; active
+status resumes an otherwise-valid grant. Transfer/retirement advance target epoch
+and invalidate old grants; preservation is not implemented. No asset spawns or
+Inventory items are created by these APIs. Gameplay must check immediately at its
+retrieval boundary; a positive result is not a reusable commit token or reservation.
+
 The authoritative registry of persistent, individually identifiable world
 assets for the Feather Framework: horses, wagons, boats, or any other type you
 configure. Assets owns each asset's identity, type, model, owner, status,
@@ -13,7 +52,7 @@ ownership changes through it.
 
 ## Status
 
-Version 0.2.0. [Contract 1](CONTRACT.md) is proposed for freezing: the master
+Version 0.2.1. [Contract 1](CONTRACT.md) is proposed for freezing: the master
 plan phases A0 to A5 are complete (see [ASSETS_PLAN.md](ASSETS_PLAN.md)).
 `horse`, `wagon` and `boat` are enabled and share one service with no
 type-specific code. bcc-stables is the first consumer.

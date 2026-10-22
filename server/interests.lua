@@ -17,7 +17,8 @@ local transferFields = Assets.Allowed({
     'toHolderType',
     'toHolderId',
     'fromHolderType',
-    'fromHolderId'
+    'fromHolderId',
+    'preservationManifestId'
 })
 
 function AssetInterests.Transfer(request, resource)
@@ -29,12 +30,14 @@ function AssetInterests.Transfer(request, resource)
         or not Config.HolderTypes[request.toHolderType or ''] or not Assets.Uuid(request.toHolderId)
         or (request.fromHolderType == nil) ~= (request.fromHolderId == nil)
         or (request.fromHolderType ~= nil and not Config.HolderTypes[request.fromHolderType])
-        or (request.fromHolderId ~= nil and not Assets.Uuid(request.fromHolderId)) then
+        or (request.fromHolderId ~= nil and not Assets.Uuid(request.fromHolderId))
+        or (request.preservationManifestId~=nil and not Assets.Uuid(request.preservationManifestId)) then
         return Err('invalid_input',
             'Asset UUID, expected revision, new holder, and optional expected current holder required.')
     end
     request = Assets.Copy(request)
     request.assetId = request.assetId:lower()
+    if request.preservationManifestId then request.preservationManifestId=request.preservationManifestId:lower()end
     request.toHolderId = request.toHolderId:lower()
     if request.fromHolderId then
         request.fromHolderId = request.fromHolderId:lower()
@@ -48,6 +51,7 @@ function AssetInterests.Transfer(request, resource)
         return actor
     end
 
+    local handoff
     return Assets.Mutate({
         resource = resource,
         requestId = request.requestId,
@@ -57,6 +61,7 @@ function AssetInterests.Transfer(request, resource)
             'expectedRevision',
             'toHolderType',
             'toHolderId',
+            'preservationManifestId',
             'fromHolderType',
             'fromHolderId',
             'reasonCode'
@@ -72,6 +77,11 @@ function AssetInterests.Transfer(request, resource)
             if not holder.ok then
                 return holder
             end
+            if request.preservationManifestId then
+                local resolved=AssetDelegation.ResolveManifest(request.preservationManifestId,request.assetId)
+                if not resolved.ok then return resolved end
+                handoff=resolved.value
+            end
             return Ok({})
         end,
         body = function(tx)
@@ -81,6 +91,7 @@ function AssetInterests.Transfer(request, resource)
                 return checked
             end
             local revision = checked.value
+            if handoff and tonumber(row.delegation_epoch)~=handoff.sourceEpoch then return Err('epoch_conflict','Preservation manifest ownership context changed.')end
             if row.status ~= 'active' then
                 return Err('asset_unavailable', 'Only an active asset can change owner.', { status = row.status })
             end
@@ -136,7 +147,11 @@ function AssetInterests.Transfer(request, resource)
                     delegationEpoch = tonumber(row.delegation_epoch) + 1
                 }
             }, ids[2])
-            return AssetRecords.Read(tx, request.assetId)
+            local result=AssetRecords.Read(tx, request.assetId)
+            if result.ok and handoff then result.value.delegationHandoff={manifestId=handoff.manifestId,
+                targetId=request.assetId,sourceEpoch=handoff.sourceEpoch,targetEpoch=handoff.sourceEpoch+1,
+                newOwnerType=request.toHolderType,newOwnerId=request.toHolderId}end
+            return result
         end
     })
 end
